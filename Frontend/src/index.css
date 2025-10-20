@@ -1,0 +1,22 @@
+@import 'tailwindcss'; /* Tailwind v4 directive */
+
+/* Import Quicksand from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
+
+/* Apply Quicksand globally to body */
+body {
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 500; /* Medium base for bolder feel */
+}
+
+/* Custom Selection Highlight: Sky Blue Background, White Text */
+::selection {
+  background-color: #35e5de; /* Sky blue (Tailwind blue-400) */
+  color: white; /* White text for contrast */
+}
+
+/* WebKit Prefix for Safari/Chrome */
+::-moz-selection {
+  background-color: #35e5de;
+  color: white;
+}
