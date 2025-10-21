@@ -23,10 +23,8 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'client/build')));
-}
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, '../Frontend/dist')));
 
 mongoose
   .connect(process.env.MONGO_URI, {
@@ -293,12 +291,10 @@ app.get('/api/contact/admin', async (req, res) => {
   }
 });
 
-// ========== PRODUCTION ROUTING ==========
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
-  });
-}
+// ========== CATCH ALL HANDLER ==========
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend/dist/index.html'));
+});
 
 // ========== ERROR HANDLING ==========
 app.use((err, req, res, next) => {
