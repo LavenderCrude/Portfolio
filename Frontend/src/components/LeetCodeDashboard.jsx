@@ -1,10 +1,21 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
-// LeetCode GraphQL API Configuration
-const LEETCODE_API_URL =
-  'https://cors-proxy.akshayr.workers.dev/?https://leetcode.com/graphql';
-const TARGET_USERNAME = 'Levender'; // Confirmed valid from your API response
+// Smart URL selection for LeetCode API
+const getLeetCodeURL = () => {
+  // For production, use our serverless function
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname.includes('vercel.app')
+  ) {
+    return '/api/leetcode';
+  }
+  // For local development, use Vite proxy
+  return '/graphql';
+};
+
+const LEETCODE_API_URL = getLeetCodeURL();
+const TARGET_USERNAME = 'Levender';
 
 // GraphQL Queries
 const GET_BASIC_DATA_QUERY = `
@@ -199,7 +210,8 @@ const transformLeetCodeData = (basicData, contestData = null) => {
     },
   };
 };
-// API fetch function with detailed error handling
+
+// API fetch function with serverless function
 const fetchLeetCodeData = async (retries = 3, delay = 1000) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -283,6 +295,7 @@ const fetchLeetCodeData = async (retries = 3, delay = 1000) => {
     }
   }
 };
+
 // COMPONENTS
 const ProfileCard = ({ profile }) => (
   <motion.div
@@ -576,12 +589,12 @@ const BadgesCard = ({ badges }) => (
 );
 
 const ContributionGraphCard = () => {
-  const totalSubmissions = 611; // Updated from API response (total submissions)
-  const totalActiveDays = 249; // Placeholder, update if you have real data
-  const maxStreak = 92; // Placeholder, update if you have real data
+  const totalSubmissions = 611;
+  const totalActiveDays = 249;
+  const maxStreak = 92;
   const contributionGrid = Array(30 * 12)
     .fill(0)
-    .map(() => Math.floor(Math.random() * 5)); // Placeholder, replace with real data if available
+    .map(() => Math.floor(Math.random() * 5));
 
   const getColor = (level) => {
     const colors = ['#393939', '#007A3E', '#00A859', '#00C96F', '#00E676'];
