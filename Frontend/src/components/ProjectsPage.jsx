@@ -119,7 +119,8 @@ const allProjectsData = [
     title: `LodgeLink - Make U'r Hotels Online`,
     description: `Developed a full-stack web application for listing and booking lodges. Implemented user authentication, cloud-based image uploads via
 Cloudinary, and CRUD operations for lodge management.`,
-    imageUrl: './src/assets/LodgeLink.png',
+    imageUrl:
+      'https://res.cloudinary.com/dali1bmhm/image/upload/v1761033642/LodgeLink_s2iwp8.png',
     isReversed: false,
   },
   {
@@ -128,7 +129,8 @@ Cloudinary, and CRUD operations for lodge management.`,
     title: 'Malware Analysis using Machine Learning',
     description: `Develop a malware detection model analysis the input string and predict the presence of malware in string, integrating results into a Jinja2
 based web interface.`,
-    imageUrl: './src/assets/Malware.png',
+    imageUrl:
+      'https://res.cloudinary.com/dali1bmhm/image/upload/v1761033641/Malware_uqn53v.png',
     isReversed: true,
   },
   {
@@ -137,7 +139,7 @@ based web interface.`,
     title: 'Health Care Assessment System',
     description: `Developed an AI-Powered medical Chatbot with multi-specialisation support, voice input, symptom
 checker (Node.js) and expert consultation using Streamlit & Python.`,
-    imageUrl: `./src/assets/HealthCare.png`,
+    imageUrl: `https://res.cloudinary.com/dali1bmhm/image/upload/v1761033641/HealthCare_hxoppd.png`,
     isReversed: false,
   },
   {
@@ -146,7 +148,8 @@ checker (Node.js) and expert consultation using Streamlit & Python.`,
     title: 'AI Chatbot Interface & API',
     description:
       'Development of a low-latency conversational AI interface, integrating multiple language models and providing a smooth, markdown-enabled user chat experience.',
-    imageUrl: './src/assets/AiChatBot.png',
+    imageUrl:
+      'https://res.cloudinary.com/dali1bmhm/image/upload/v1761033641/AiChatBot_iyrlod.png',
     isReversed: true,
   },
 
@@ -156,7 +159,7 @@ checker (Node.js) and expert consultation using Streamlit & Python.`,
     title: 'Fitness Tracker Backend API',
     description:
       'A robust and scalable Node.js/Express API designed to handle millions of user data points, including workout logs, personal bests, and social tracking features.',
-    imageUrl: `./src/assets/Fitness.png`,
+    imageUrl: `https://res.cloudinary.com/dali1bmhm/image/upload/v1761033641/Fitness_boa6ha.png`,
     isReversed: false,
   },
 ];

@@ -138,7 +138,10 @@ const Hero = () => {
           className="flex-1 flex justify-end"
         >
           <img
-            src="src/assets/manWithLaptop.png"
+            src="https://res.cloudinary.com/dali1bmhm/image/upload/v1761033641/manWithLaptop_ckz8wv.png
+
+
+"
             alt="Akhil Kushwaha Illustration"
             className="w-full max-w-md h-auto"
           />

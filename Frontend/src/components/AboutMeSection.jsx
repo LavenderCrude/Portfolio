@@ -57,7 +57,7 @@ const AboutMeSection = () => {
           >
             <img
               // Using a placeholder that resembles the black & white style
-              src="/src/assets/About.png"
+              src="https://res.cloudinary.com/dali1bmhm/image/upload/v1761033641/About_ntmgty.png"
               alt="Professional Developer Illustration"
               // Removed border-4 border-black
               className="w-full h-auto"
