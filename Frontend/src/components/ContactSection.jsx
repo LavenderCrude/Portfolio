@@ -58,12 +58,12 @@ const ContactSection = () => {
         console.log('✅ Message saved to MongoDB:', result.data);
       } else {
         setSubmitStatus('error');
-        alert(result.message || 'Something went wrong!');
+        // ALERT REMOVED - sirf red message dikhega
       }
     } catch (error) {
       console.error('❌ Submission error:', error);
       setSubmitStatus('error');
-      alert('Network error. Please check your connection.');
+      // ALERT REMOVED - sirf red message dikhega
     } finally {
       setIsSubmitting(false);
     }

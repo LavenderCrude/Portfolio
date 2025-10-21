@@ -1,80 +1,285 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
-const API_ENDPOINT = 'http://localhost:3001/api/leetcode-stats';
+// LeetCode GraphQL API Configuration
+const LEETCODE_API_URL = '/graphql'; // Use Vite proxy to avoid CORS
+const TARGET_USERNAME = 'Levender'; // Confirmed valid from your API response
 
-// ... (mockDashboardData, MOCK_TOTALS, getDifficultyColor, and all Card Components remain the same) ...
+// GraphQL Queries
+const GET_BASIC_DATA_QUERY = `
+  query getUserProfile($username: String!) {
+    matchedUser(username: $username) {
+      username
+      submitStats {
+        acSubmissionNum {
+          difficulty
+          count
+          submissions
+        }
+      }
+      profile {
+        ranking
+        userAvatar
+      }
+      activeBadge {
+        name
+        icon
+      }
+      languageProblemCount {
+        languageName
+        problemsSolved
+      }
+    }
+    allQuestionsCount {
+      difficulty
+      count
+    }
+  }
+`;
 
+const GET_CONTEST_DATA_QUERY = `
+  query getContestRanking($username: String!) {
+    userContestRanking(username: $username) {
+      rating
+      globalRanking
+      attendedContestsCount
+      topPercentage
+    }
+  }
+`;
+
+// Mock data updated to match real API response
 const mockDashboardData = {
   profile: {
-    username: 'Akhil Kushwaha',
+    username: 'Levender',
     tag: 'Levender',
-    rank: '435,493', // Overall Ranking
-    imageUrl: 'https://placehold.co/100x100/363636/ffffff?text=A',
+    rank: '433,809',
+    imageUrl:
+      'https://assets.leetcode.com/users/Levender/avatar_1760581562.png',
   },
   contest: {
     rating: 1478,
-    globalRank: '39,506', // Global Ranking
-    attended: 241,
+    globalRank: '395,006',
+    attended: 1,
     topPercent: 51.39,
   },
   solved: {
-    total: 3721, // Total problems on LeetCode
-    current: 282, // Total problems solved
+    total: 3721,
+    current: 284,
     breakdown: {
-      easy: { difficulty: 'Easy', count: 130, submissions: 150 },
-      medium: { difficulty: 'Medium', count: 138, submissions: 190 },
-      hard: { difficulty: 'Hard', count: 14, submissions: 25 },
+      easy: { difficulty: 'Easy', count: 131, submissions: 279 },
+      medium: { difficulty: 'Medium', count: 139, submissions: 310 },
+      hard: { difficulty: 'Hard', count: 14, submissions: 22 },
     },
-    attempting: 'N/A', // Data not available in API
+    attempting: 'N/A',
   },
   badges: {
     count: 1,
-    recent: '100 Days Badge 2025',
-    imageUrl: 'https://static.leetcode.cn/cn-data/badge/100-days-2025.png',
+    recent: 'Annual Badge',
+    imageUrl: 'https://assets.leetcode.com/static_assets/others/lg25100.png',
   },
   stats: {
-    views: 'N/A',
-    solution: 'N/A',
-    discuss: 'N/A',
-    reputation: 0,
+    views: '+10',
+    solution: '+9',
+    reputation: '⭐⭐⭐⭐',
     languages: [
-      { name: 'C++', solved: 270 },
-      { name: 'Python', solved: 12 },
+      { name: 'C++', solved: 272 },
+      { name: 'MySQL', solved: 11 },
+      { name: 'JavaScript', solved: 6 },
     ],
   },
 };
 
-// --- HELPER DATA ---
-// Mock Total problems for accurate percentage calculation in Solved Breakdown Card
 const MOCK_TOTALS = {
   easy: 908,
   medium: 1936,
   hard: 877,
 };
 
-// Function to get the color for a difficulty level
 const getDifficultyColor = (key) => {
   switch (key) {
     case 'easy':
-      return '#4CAF50'; // Green
+      return '#4CAF50';
     case 'medium':
-      return '#ffb800'; // Yellow/Amber
+      return '#FFB800';
     case 'hard':
-      return '#FF4500'; // Red/Orange
+      return '#FF4500';
     default:
       return '#363636';
   }
 };
 
-// --- COMPONENTS ---
+// Data transformation function
+const transformLeetCodeData = (basicData, contestData = null) => {
+  if (!basicData?.data?.matchedUser) {
+    console.error('No user data found in basicData:', basicData);
+    return null;
+  }
 
+  const user = basicData.data.matchedUser;
+  const allQuestionsCount = basicData.data.allQuestionsCount;
+  const totalProblems =
+    allQuestionsCount.find((q) => q.difficulty === 'All')?.count || 0;
+
+  const submissionStats = user.submitStats.acSubmissionNum;
+  const totalSolved =
+    submissionStats.find((s) => s.difficulty === 'All')?.count || 0;
+
+  const getSubmissions = (difficulty) =>
+    submissionStats.find((s) => s.difficulty === difficulty) || {
+      difficulty,
+      count: 0,
+      submissions: 0,
+    };
+
+  const languageStats = user.languageProblemCount || [];
+  const topLanguages = languageStats
+    .sort((a, b) => b.problemsSolved - a.problemsSolved)
+    .slice(0, 3)
+    .map((lang) => ({
+      name: lang.languageName,
+      solved: lang.problemsSolved,
+    }));
+
+  const currentBadge = user.activeBadge;
+
+  let contest = {
+    rating: 0,
+    globalRank: 'N/A',
+    attended: 0,
+    topPercent: 0,
+  };
+
+  if (contestData?.data?.userContestRanking) {
+    const ranking = contestData.data.userContestRanking;
+    contest = {
+      rating: Math.round(ranking.rating) || 0,
+      globalRank: ranking.globalRanking
+        ? ranking.globalRanking.toLocaleString()
+        : 'N/A',
+      attended: ranking.attendedContestsCount || 0,
+      topPercent: ranking.topPercentage ? Math.round(ranking.topPercentage) : 0,
+    };
+  }
+
+  return {
+    profile: {
+      username: user.username,
+      tag: user.username,
+      rank: user.profile.ranking
+        ? user.profile.ranking.toLocaleString()
+        : 'N/A',
+      imageUrl:
+        user.profile.userAvatar ||
+        'https://placehold.co/100x100/363636/ffffff?text=A',
+    },
+    contest,
+    solved: {
+      total: totalProblems,
+      current: totalSolved,
+      breakdown: {
+        easy: getSubmissions('Easy'),
+        medium: getSubmissions('Medium'),
+        hard: getSubmissions('Hard'),
+      },
+      attempting: 'N/A',
+    },
+    badges: {
+      count: currentBadge ? 1 : 0,
+      recent: currentBadge?.name || 'No Active Badge',
+      imageUrl: currentBadge?.icon || null,
+    },
+    stats: {
+      views: 'N/A',
+      solution: 'N/A',
+      discuss: 'N/A',
+      reputation: 0,
+      languages: topLanguages,
+    },
+  };
+};
+
+// API fetch function with retry
+const fetchLeetCodeData = async (retries = 3, delay = 1000) => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      // Fetch basic data
+      const basicResponse = await fetch(LEETCODE_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: GET_BASIC_DATA_QUERY,
+          variables: { username: TARGET_USERNAME },
+        }),
+      });
+
+      if (!basicResponse.ok) {
+        throw new Error(`HTTP error! status: ${basicResponse.status}`);
+      }
+
+      const basicData = await basicResponse.json();
+
+      if (basicData.errors || !basicData.data?.matchedUser) {
+        throw new Error(
+          `API error: ${
+            basicData.errors?.map((e) => e.message).join(', ') ||
+            'User not found'
+          }`
+        );
+      }
+
+      // Fetch contest data
+      let contestData = null;
+      try {
+        const contestResponse = await fetch(LEETCODE_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: GET_CONTEST_DATA_QUERY,
+            variables: { username: TARGET_USERNAME },
+          }),
+        });
+
+        if (contestResponse.ok) {
+          contestData = await contestResponse.json();
+          if (contestData.errors) {
+            console.warn('Contest data errors:', contestData.errors);
+          }
+        }
+      } catch (contestError) {
+        console.warn(
+          `Attempt ${attempt} - Failed to fetch contest data:`,
+          contestError
+        );
+      }
+
+      return transformLeetCodeData(basicData, contestData);
+    } catch (error) {
+      console.error(
+        `Attempt ${attempt} - Error fetching LeetCode data:`,
+        error.message
+      );
+      if (attempt < retries) {
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        throw error;
+      }
+    }
+  }
+};
+
+// COMPONENTS
 const ProfileCard = ({ profile }) => (
   <motion.div
     initial={{ opacity: 0, x: -50 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ duration: 0.5, delay: 0.1 }}
-    className="bg-[#282828] p-4 rounded-xl shadow-lg h-full min-h-[300px]"
+    className="bg-[#282828] p-4 rounded-xl shadow-lg h-full min-h-[300px] font-quicksand"
   >
     <div className="flex items-center mb-4">
       <img
@@ -83,21 +288,23 @@ const ProfileCard = ({ profile }) => (
         className="w-14 h-14 rounded-full mr-3 border-2 border-green-500"
       />
       <div>
-        <div className="text-white text-lg font-semibold">Akhil Kushwaha</div>
+        <div className="text-white text-lg font-semibold">
+          {profile.username}
+        </div>
         <div className="text-gray-400 text-sm">{profile.tag}</div>
       </div>
     </div>
     <div className="text-white text-base mb-4">
       Global Rank{' '}
       <span className="text-2xl font-bold block">
-        {profile.rank} <span className="text-sm font-thin">/~5,000,000</span>
+        {profile.rank} <span className="text-sm font-normal">/~5,000,000</span>
       </span>
       <span className="text-2xl font-bold text-green-500">
-        <span className="text-lg font-thin text-white"> Top: &nbsp;</span>
+        <span className="text-lg font-normal text-white"> Top: </span>
         {profile.rank && profile.rank !== 'N/A'
           ? `${(
               100 -
-              (1 - parseInt(profile.rank.replace(/,/g, '')) / 5000000) * 100
+              (parseInt(profile.rank.replace(/,/g, '')) / 5000000) * 100
             ).toFixed(2)}%`
           : 'N/A'}
       </span>
@@ -118,10 +325,9 @@ const CommunityStatsCard = ({ stats }) => (
     initial={{ opacity: 0, x: -50 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ duration: 0.5, delay: 0.3 }}
-    className="bg-[#282828] p-4 rounded-xl shadow-lg mt-4"
+    className="bg-[#282828] p-4 rounded-xl shadow-lg mt-4 font-quicksand"
   >
     <h3 className="text-white text-lg font-semibold mb-4">Community Stats</h3>
-
     <div className="space-y-3 text-sm">
       {Object.entries({
         Views: stats.views || '+10',
@@ -149,7 +355,6 @@ const CommunityStatsCard = ({ stats }) => (
         </div>
       ))}
     </div>
-
     <div className="mt-6">
       <h4 className="text-white text-sm font-semibold mb-2">Top Languages</h4>
       <div className="flex flex-wrap gap-2">
@@ -176,14 +381,13 @@ const ContestRatingCard = ({ contest }) => (
     initial={{ opacity: 0, y: -50 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5, delay: 0.2 }}
-    className="bg-[#282828] p-5 rounded-xl shadow-lg col-span-3 md:col-span-3 lg:col-span-3"
+    className="bg-[#282828] p-5 rounded-xl shadow-lg col-span-1 md:col-span-2 lg:col-span-3 font-quicksand"
   >
     <div className="grid grid-cols-3 gap-4 border-b border-gray-700 pb-3 mb-3 text-sm text-gray-400">
       <div className="text-center">Contest Rating</div>
       <div className="text-center">Contest Global Rank</div>
       <div className="text-center">Attended</div>
     </div>
-
     <div className="grid grid-cols-3 gap-4 text-white font-bold text-xl mb-4">
       <div className="text-center text-3xl text-orange-400">
         {contest.rating}
@@ -191,78 +395,64 @@ const ContestRatingCard = ({ contest }) => (
       <div className="text-center text-lg">
         {contest.globalRank}
         <div className="text-xs font-normal text-gray-400 pt-1">
-          {/* Mock Total Rank: Global Rank is dynamic, Total is hard to get */}
           /~1,000,000
         </div>
-        <br />
       </div>
       <div className="text-center text-lg">{contest.attended}</div>
     </div>
-
-    {/* Simplified Rating Graph/Timeline */}
     <div className="w-full h-1 bg-gray-700 rounded-full my-4 relative">
       <div
         className="absolute top-0 h-full bg-orange-400 rounded-full"
-        style={{ width: `${(contest.rating / 3000) * 100}%` }}
+        style={{ width: `${Math.min((contest.rating / 3000) * 100, 100)}%` }}
       ></div>
-      <br />
-
-      <div className="absolute -top-3 left-[50%] transform -translate-x-1/2 text-xs text-gray-400 py-6 ">
+      <div className="absolute -top-3 left-[50%] transform -translate-x-1/2 text-xs text-gray-400 py-6">
         {contest.rating}
       </div>
     </div>
-
     <div className="text-center text-sm text-gray-400 pt-4">Contest Stats</div>
   </motion.div>
 );
 
-const TopPerformanceCard = ({ topPercent }) => (
-  <motion.div
-    initial={{ opacity: 0, y: -50 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5, delay: 0.4 }}
-    className="bg-[#282828] p-5 rounded-xl shadow-lg col-span-2 md:col-span-3 lg:col-span-1"
-  >
-    <div className="text-gray-400 text-sm mb-2">Contest Top</div>
-    <div className="text-white text-3xl font-bold mb-4">{topPercent}%</div>
-
-    <div className="flex items-end h-20 space-x-1">
-      {[10, 20, 30, 40, 70, 80, 50, 60, 90, 100].map((h, i) => (
-        <div
-          key={i}
-          className={`w-1/12 rounded-t-sm ${
-            // Highlight the bar representing the top percentage visually
-            h > 100 - topPercent ? 'bg-orange-500' : 'bg-gray-700'
-          }`}
-          style={{ height: `${h}%` }}
-        ></div>
-      ))}
-    </div>
-    <p className="text-xs text-gray-400 pt-2">
-      Better than {topPercent}% of users.
-    </p>
-  </motion.div>
-);
+const TopPerformanceCard = ({ topPercent }) => {
+  const barHeights = Array.from({ length: 10 }, (_, i) => (i + 1) * 10);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.4 }}
+      className="bg-[#282828] p-5 rounded-xl shadow-lg col-span-1 md:col-span-2 lg:col-span-1 font-quicksand"
+    >
+      <div className="text-gray-400 text-sm mb-2">Contest Top</div>
+      <div className="text-white text-3xl font-bold mb-4">{topPercent}%</div>
+      <div className="flex items-end h-20 space-x-1">
+        {barHeights.map((h, i) => (
+          <div
+            key={i}
+            className={`w-1/10 rounded-t-sm ${
+              h <= topPercent ? 'bg-orange-500' : 'bg-gray-700'
+            }`}
+            style={{ height: `${h}%` }}
+          ></div>
+        ))}
+      </div>
+      <p className="text-xs text-gray-400 pt-2">
+        Better than {topPercent}% of users.
+      </p>
+    </motion.div>
+  );
+};
 
 const SolvedBreakdownCard = ({ solved }) => {
   const totalRatio = solved.current / solved.total;
-
-  // A safer approach is to mock the total available problems for each difficulty:
-  const MOCK_TOTALS = {
-    easy: 908,
-    medium: 1936,
-    hard: 877,
-  };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.4 }}
-      className="bg-[#282828] p-5 rounded-xl shadow-lg col-span-2"
+      className="bg-[#282828] p-5 rounded-xl shadow-lg col-span-1 md:col-span-2 font-quicksand"
     >
       <div className="grid grid-cols-2 gap-4">
-        {/* Progress Ring */}
         <div className="flex flex-col items-center justify-center">
           <svg viewBox="0 0 100 100" className="w-24 h-24">
             <circle
@@ -288,7 +478,7 @@ const SolvedBreakdownCard = ({ solved }) => {
               x="50"
               y="45"
               textAnchor="middle"
-              className="text-xl font-bold fill-white"
+              style={{ fill: 'white', fontSize: '20px', fontWeight: 'bold' }}
             >
               {solved.current}
             </text>
@@ -296,19 +486,17 @@ const SolvedBreakdownCard = ({ solved }) => {
               x="50"
               y="65"
               textAnchor="middle"
-              className="text-xs fill-gray-400"
+              style={{ fill: '#9CA3AF', fontSize: '12px' }}
             >
               /{solved.total}
             </text>
           </svg>
           <div className="text-gray-400 text-sm mt-2">Solved Problems</div>
-          <div className="text-gray-400 text-xs mt-1">15 Attempting</div>
+          <div className="text-gray-400 text-xs mt-1">14 Attempting</div>
         </div>
-
-        {/* Breakdown List (Updated to use MOCK_TOTALS for bar width) */}
         <div className="flex flex-col justify-around py-2">
           {Object.entries(solved.breakdown).map(([key, item]) => {
-            const totalForDifficulty = MOCK_TOTALS[key] || 1; // Fallback
+            const totalForDifficulty = MOCK_TOTALS[key] || 1;
             const solvedCount = item.count;
             const percentage = (solvedCount / totalForDifficulty) * 100;
 
@@ -346,7 +534,7 @@ const BadgesCard = ({ badges }) => (
     initial={{ opacity: 0, y: 50 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5, delay: 0.6 }}
-    className="bg-[#282828] p-5 rounded-xl shadow-lg col-span-2"
+    className="bg-[#282828] p-5 rounded-xl shadow-lg col-span-1 md:col-span-2 font-quicksand"
   >
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-white text-lg font-semibold">Active Badge</h3>
@@ -355,9 +543,7 @@ const BadgesCard = ({ badges }) => (
         →
       </span>
     </div>
-
     <div className="flex items-center justify-between">
-      {/* Dynamic Badge Image/Fallback */}
       <div className="flex gap-4">
         {badges.imageUrl ? (
           <img
@@ -371,7 +557,6 @@ const BadgesCard = ({ badges }) => (
           </div>
         )}
       </div>
-
       <div className="text-right">
         <div className="text-gray-400 text-sm">Current Active Badge:</div>
         <div className="text-white font-medium">{badges.recent}</div>
@@ -380,14 +565,13 @@ const BadgesCard = ({ badges }) => (
   </motion.div>
 );
 
-// Contribution Graph Card - Needs actual LeetCode Contribution API data, which is complex.
 const ContributionGraphCard = () => {
-  const totalSubmissions = 1050; // Mocked
-  const totalActiveDays = 249; // Mocked
-  const maxStreak = 92; // Mocked
+  const totalSubmissions = 611; // Updated from API response (total submissions)
+  const totalActiveDays = 249; // Placeholder, update if you have real data
+  const maxStreak = 92; // Placeholder, update if you have real data
   const contributionGrid = Array(30 * 12)
     .fill(0)
-    .map(() => Math.floor(Math.random() * 5));
+    .map(() => Math.floor(Math.random() * 5)); // Placeholder, replace with real data if available
 
   const getColor = (level) => {
     const colors = ['#393939', '#007A3E', '#00A859', '#00C96F', '#00E676'];
@@ -415,22 +599,18 @@ const ContributionGraphCard = () => {
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.8 }}
-      className="bg-[#282828] p-5 rounded-xl shadow-lg col-span-4"
+      className="bg-[#282828] p-5 rounded-xl shadow-lg col-span-4 font-quicksand"
     >
       <div className="text-white text-lg font-semibold mb-4">
         {totalSubmissions} submissions in the past one year
       </div>
-
       <div className="flex justify-between items-center text-gray-400 text-sm mb-4">
         <span>
           Total active days: {totalActiveDays} | Max streak: {maxStreak}
         </span>
         <span className="text-green-400 cursor-pointer">Current ↓</span>
       </div>
-
-      {/* Grid Layout for Contributions */}
       <div className="grid grid-cols-[auto_1fr] gap-x-2">
-        {/* Month Labels (Simplified) */}
         <div className="col-start-2 grid grid-cols-12 text-xs text-gray-400 mb-2">
           {MonthNames.map((m, i) => (
             <span key={i} className="text-left">
@@ -438,8 +618,6 @@ const ContributionGraphCard = () => {
             </span>
           ))}
         </div>
-
-        {/* Contribution Blocks (Simplified to represent 12 months) */}
         <div className="col-start-2 grid grid-cols-52 gap-0.5 w-full">
           {contributionGrid.slice(0, 364).map((level, index) => (
             <div
@@ -455,49 +633,47 @@ const ContributionGraphCard = () => {
   );
 };
 
-// --- MAIN DASHBOARD COMPONENT ---
-
+// MAIN DASHBOARD COMPONENT
 const LeetCodeDashboard = () => {
   const [data, setData] = useState(mockDashboardData);
-  const [loading, setLoading] = useState(true); // Start loading true
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [usingMockData, setUsingMockData] = useState(false);
 
   useEffect(() => {
-    const fetchRealData = async () => {
-      setLoading(true);
-      setError(null);
-
+    const fetchData = async () => {
       try {
-        const response = await fetch(API_ENDPOINT);
-        const realData = await response.json();
+        setLoading(true);
+        setError(null);
 
-        if (response.status !== 200) {
-          // Handle API errors like username not found (404) or server error (500)
-          setError(
-            realData.error || 'Failed to fetch data with an unknown error.'
-          );
-          setData(mockDashboardData); // Fallback to mock data on API error
-        } else {
+        const realData = await fetchLeetCodeData();
+
+        if (realData) {
           setData(realData);
+          setUsingMockData(false);
+        } else {
+          throw new Error('No data received from LeetCode API');
         }
-      } catch (e) {
-        console.error('Network or CORS error fetching LeetCode data:', e);
-        setError(
-          'Could not connect to the API server (Check your server.js status).'
-        );
-        setData(mockDashboardData); // Fallback to mock data on network error
+      } catch (error) {
+        console.error('Failed to fetch real LeetCode data:', error.message);
+        setError(`Failed to fetch LeetCode data: ${error.message}`);
+        setData(mockDashboardData);
+        setUsingMockData(true);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRealData();
-  }, []); // Run only once on component mount
+    fetchData();
+  }, []);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#1e1e1e] flex items-center justify-center">
-        <p className="text-white text-xl">Loading LeetCode Dashboard...</p>
+      <div className="min-h-screen bg-[#1e1e1e] flex items-center justify-center font-quicksand">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-xl">Loading LeetCode Stats...</p>
+        </div>
       </div>
     );
   }
@@ -505,31 +681,28 @@ const LeetCodeDashboard = () => {
   return (
     <section
       id="leetcode"
-      className="bg-[#1e1e1e] p-6 sm:p-8 min-h-screen pb-20 "
+      className="bg-[#282828] p-4 sm:p-6 lg:p-8 min-h-screen pb-20 font-quicksand"
     >
       <div className="max-w-7xl mx-auto">
-        {/* Updated Header with Animation */}
-        <div className="text-center text-white pb-15">
+        <div className="text-center text-white mb-8 lg:mb-12">
           <motion.span
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-4xl lg:text-5xl font-bold inline-block"
+            className="text-3xl sm:text-4xl lg:text-5xl font-bold inline-block"
           >
             My{' '}
           </motion.span>
-
           <motion.span
             initial={{ x: -100, opacity: 0 }}
             whileInView={{ x: 0, opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
-            className="text-4xl lg:text-6xl font-bold leading-tight inline-block"
+            className="text-3xl sm:text-4xl lg:text-6xl font-bold leading-tight inline-block"
             style={{
               WebkitTextStroke: '2px orange',
               color: 'transparent',
-              textStroke: '2px white',
             }}
           >
             Leetcode
@@ -537,52 +710,44 @@ const LeetCodeDashboard = () => {
         </div>
 
         {error && (
-          <div className="bg-red-900 text-white p-3 rounded-lg mb-6 border border-red-700">
-            ⚠️ Error: {error} - Showing Last Update Data. Please check your
-            **server.js** and its terminal.
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-yellow-900 text-yellow-100 p-4 rounded-lg mb-6 border border-yellow-700 max-w-2xl mx-auto"
+          >
+            ⚠️ {error} {usingMockData && '(Using Mock Data)'}
+          </motion.div>
         )}
 
-        {/* Main Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Column (Profile, Community Stats) */}
-          <div className="col-span-1 flex flex-col space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="col-span-1 flex flex-col space-y-4 sm:space-y-6">
             <ProfileCard profile={data.profile} />
             <CommunityStatsCard stats={data.stats} />
           </div>
-
-          {/* Right Column (Contest, Solved Breakdown, Badges, Graph) */}
-          <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Top Row: Contest Rating and Top Performance */}
+          <div className="col-span-1 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <ContestRatingCard contest={data.contest} />
             <TopPerformanceCard topPercent={data.contest.topPercent} />
-
-            {/* Middle Row: Solved Breakdown and Badges */}
             <SolvedBreakdownCard solved={data.solved} />
             <BadgesCard badges={data.badges} />
-
-            {/* Bottom Row: Contribution Graph (spans all columns) */}
-            <div className="col-span-full">
+            <div className="col-span-1 md:col-span-2 lg:col-span-4">
               <ContributionGraphCard />
             </div>
           </div>
         </div>
 
-        {/* --- NEWLY ADDED BUTTON AT THE BOTTOM --- */}
-        <div className="flex justify-center mt-10">
+        <div className="flex justify-center mt-8 lg:mt-12">
           <motion.a
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 1 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
             href="https://leetcode.com/u/Levender/"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-8 py-3 text-lg font-semibold text-white border-2 border-white rounded-full hover:bg-gray-800 transition-colors shadow-lg hover:scale-105"
+            className="px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold text-white border-2 border-white rounded-full hover:bg-gray-800 transition-all duration-300 shadow-lg hover:scale-105"
           >
             View More on LeetCode
           </motion.a>
         </div>
-        {/* ------------------------------------- */}
       </div>
     </section>
   );
