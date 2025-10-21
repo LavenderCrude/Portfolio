@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 // LeetCode GraphQL API Configuration
-const LEETCODE_API_URL = 'https://corsproxy.io/?https://leetcode.com/graphql';
+const LEETCODE_API_URL =
+  'https://cors-proxy.akshayr.workers.dev/?https://leetcode.com/graphql';
 const TARGET_USERNAME = 'Levender'; // Confirmed valid from your API response
 
 // GraphQL Queries
@@ -198,11 +199,12 @@ const transformLeetCodeData = (basicData, contestData = null) => {
     },
   };
 };
-
-// API fetch function with retry
+// API fetch function with detailed error handling
 const fetchLeetCodeData = async (retries = 3, delay = 1000) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
+      console.log(`🔄 Attempt ${attempt}: Fetching from ${LEETCODE_API_URL}`);
+
       // Fetch basic data
       const basicResponse = await fetch(LEETCODE_API_URL, {
         method: 'POST',
@@ -215,11 +217,17 @@ const fetchLeetCodeData = async (retries = 3, delay = 1000) => {
         }),
       });
 
+      console.log('📊 Response status:', basicResponse.status);
+      console.log('✅ Response ok:', basicResponse.ok);
+
       if (!basicResponse.ok) {
+        const errorText = await basicResponse.text();
+        console.error('❌ Error response:', errorText);
         throw new Error(`HTTP error! status: ${basicResponse.status}`);
       }
 
       const basicData = await basicResponse.json();
+      console.log('📦 Basic data received:', basicData);
 
       if (basicData.errors || !basicData.data?.matchedUser) {
         throw new Error(
@@ -246,6 +254,7 @@ const fetchLeetCodeData = async (retries = 3, delay = 1000) => {
 
         if (contestResponse.ok) {
           contestData = await contestResponse.json();
+          console.log('🏆 Contest data received:', contestData);
           if (contestData.errors) {
             console.warn('Contest data errors:', contestData.errors);
           }
@@ -257,14 +266,16 @@ const fetchLeetCodeData = async (retries = 3, delay = 1000) => {
         );
       }
 
-      return transformLeetCodeData(basicData, contestData);
+      const transformedData = transformLeetCodeData(basicData, contestData);
+      console.log('🎉 Transformed data:', transformedData);
+      return transformedData;
     } catch (error) {
       console.error(
-        `Attempt ${attempt} - Error fetching LeetCode data:`,
+        `❌ Attempt ${attempt} - Error fetching LeetCode data:`,
         error.message
       );
       if (attempt < retries) {
-        console.log(`Retrying in ${delay}ms...`);
+        console.log(`⏳ Retrying in ${delay}ms...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
       } else {
         throw error;
@@ -272,7 +283,6 @@ const fetchLeetCodeData = async (retries = 3, delay = 1000) => {
     }
   }
 };
-
 // COMPONENTS
 const ProfileCard = ({ profile }) => (
   <motion.div
