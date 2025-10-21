@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 // LeetCode GraphQL API Configuration
-const LEETCODE_API_URL = '/graphql'; // Use Vite proxy to avoid CORS
+const LEETCODE_API_URL = 'https://leetcode.com/graphql'; // Use Vite proxy to avoid CORS
 const TARGET_USERNAME = 'Levender'; // Confirmed valid from your API response
 
 // GraphQL Queries
