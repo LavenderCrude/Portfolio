@@ -515,7 +515,7 @@ const SolvedBreakdownCard = ({ solved }) => {
             </text>
           </svg>
           <div className="text-gray-400 text-sm mt-2">Solved Problems</div>
-          <div className="text-gray-400 text-xs mt-1">14 Attempting</div>
+          <div className="text-gray-400 text-xs mt-1">1.1K submissions</div>
         </div>
         <div className="flex flex-col justify-around py-2">
           {Object.entries(solved.breakdown).map(([key, item]) => {
