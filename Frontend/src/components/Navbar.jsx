@@ -52,7 +52,7 @@ const Navbar = () => {
       {/* Right: Rectangular Resume Button */}
       <motion.a
         whileHover={{ scale: 1.02 }}
-        href="https://drive.google.com/file/d/1b1EaQlESnJnWdJtdZqiJM6VaHC8SE2v4/view?usp=drivesdk"
+        href="https://drive.google.com/file/d/1RGxoye6kt7b84fQ6e8gNO17xD8XL8rwr/view?usp=drivesdk"
         download
         className="flex items-center gap-2 bg-black text-white px-6 py-3 text-xl font-bold cursor-pointer whitespace-nowrap hover:bg-gray-800 transition-all duration-200 rounded-md shadow-sm"
       >
