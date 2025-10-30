@@ -459,7 +459,7 @@ const TopPerformanceCard = ({ topPercent }) => {
         ))}
       </div>
       <p className="text-xs text-gray-400 pt-2">
-        Better than {topPercent}% of users.
+        Better than {100 - topPercent}% of users.
       </p>
     </motion.div>
   );
