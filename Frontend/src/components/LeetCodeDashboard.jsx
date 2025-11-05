@@ -437,7 +437,15 @@ const ContestRatingCard = ({ contest }) => (
 );
 
 const TopPerformanceCard = ({ topPercent }) => {
-  const barHeights = Array.from({ length: 10 }, (_, i) => (i + 1) * 10);
+  const totalBars = 10;
+  // Smaller topPercent means better rank → more orange bars
+  const filledBars = Math.max(
+    1,
+    totalBars - Math.floor((topPercent / 100) * totalBars)
+  );
+
+  const barHeights = Array.from({ length: totalBars }, (_, i) => (i + 1) * 10);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -50 }}
@@ -446,18 +454,21 @@ const TopPerformanceCard = ({ topPercent }) => {
       className="bg-[#282828] p-5 rounded-xl shadow-lg col-span-1 md:col-span-2 lg:col-span-1 font-quicksand"
     >
       <div className="text-gray-400 text-sm mb-2">Contest Top</div>
+
       <div className="text-white text-3xl font-bold mb-4">{topPercent}%</div>
+
       <div className="flex items-end h-20 space-x-1">
         {barHeights.map((h, i) => (
           <div
             key={i}
-            className={`w-1/10 rounded-t-sm ${
-              h <= topPercent ? 'bg-orange-500' : 'bg-gray-700'
+            className={`flex-1 rounded-t-sm ${
+              i < filledBars ? 'bg-orange-500' : 'bg-gray-700'
             }`}
             style={{ height: `${h}%` }}
           ></div>
         ))}
       </div>
+
       <p className="text-xs text-gray-400 pt-2">
         Better than {100 - topPercent}% of users.
       </p>
